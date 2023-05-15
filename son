@@ -9,12 +9,12 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("FTP Client")
 
-        
+        //FTP adresi, kullanıcı adı ve şifresi
         self.ftp_url = "ftp://example.com/"
         self.ftp_username = "username"
         self.ftp_password = "password"
 
-      
+        //FTP dosya sistemi modeli ve ağ yöneticisi
         self.model = QFileSystemModel()
         self.model.setRootPath(self.ftp_url)
         self.tree = QTreeView()
@@ -23,7 +23,7 @@ class MainWindow(QMainWindow):
 
         self.net_manager = QNetworkAccessManager(self)
 
-  
+        //Medya oynatıcı, oynatma listesi ve etiket
         self.media_player = QMediaPlayer()
         self.media_player.setVolume(50)
         self.playlist = QMediaPlaylist(self.media_player)
@@ -31,7 +31,7 @@ class MainWindow(QMainWindow):
         self.label = QLabel()
         self.label.setAlignment(Qt.AlignCenter)
 
-  
+        //Arayüz düzeni
         main_layout = QHBoxLayout()
         left_layout = QVBoxLayout()
         left_layout.addWidget(self.tree)
@@ -52,9 +52,12 @@ class MainWindow(QMainWindow):
         index = self.tree.currentIndex()
         file_path = self.model.filePath(index)
 
+        //Seçilen dosya bir klasör ise
         if QFile(file_path).isDir():
             return
 
+        
+       //Seçilen dosya bir medya dosyası ise
         mime_type = QFile(file_path).mimeType()
         if mime_type.startswith("audio") or mime_type.startswith("video"):
             self.playlist.clear()
@@ -63,6 +66,7 @@ class MainWindow(QMainWindow):
             self.media_player.play()
             self.label.setText(QFile(file_path).fileName())
 
+            //Seçilen dosyanın boyutunu al
             url = QUrl.fromUserInput(file_path)
             request = QNetworkRequest(url)
             request.setAttribute(QNetworkRequest.AuthenticationRequiredAttribute, True)
