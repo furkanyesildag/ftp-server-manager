@@ -1,5 +1,5 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileSystemModel, QTreeView, QVBoxLayout, QHBoxLayout, QWidget, QLabel
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileSystemModel, QTreeView, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QFileDialog
 from PyQt5.QtCore import Qt, QUrl, QFile, QIODevice
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaPlaylist, QVideoWidget
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
@@ -75,8 +75,22 @@ class MainWindow(QMainWindow):
             reply = self.net_manager.head(request)
             reply.finished.connect(lambda: self.label.setText(f"{QFile(file_path).fileName()} ({int(reply.header(QNetworkRequest.ContentLengthHeader))//(1024*1024)} MB)"))
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec_())
+        # Seçilen dosya bir yerel dosya ise
+        if mime_type.startswith("application/octet-stream"):
+            self.open_file_dialog()
+
+    def open_file_dialog(self):
+        file_dialog = QFileDialog()
+        file_path, _ = file_dialog.getOpenFileName(self, "Open File")
+        if file_path:
+         self.playlist.clear()
+        media_content = QMediaContent(QUrl.fromLocalFile(file_path))
+        self.playlist.addMedia(media_content)
+        self.media_player.play()
+        self.label.setText(QFile(file_path).fileName())
+
+
+app = QApplication(sys.argv)
+window = MainWindow()
+window.show()
+sys.exit(app.exec_())
