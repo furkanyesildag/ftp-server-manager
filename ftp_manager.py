@@ -1,7 +1,8 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileSystemModel, QTreeView, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QFileDialog
 from PyQt5.QtCore import Qt, QUrl, QFile, QIODevice
-from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaPlaylist, QVideoWidget
+from PyQt5.QtMultimediaWidgets import QVideoWidget  # QVideoWidget'ı PyQt5.QtMultimediaWidgets modülünden import ediyoruz
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaPlaylist
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
 
 class MainWindow(QMainWindow):
@@ -83,11 +84,11 @@ class MainWindow(QMainWindow):
         file_dialog = QFileDialog()
         file_path, _ = file_dialog.getOpenFileName(self, "Open File")
         if file_path:
-         self.playlist.clear()
-        media_content = QMediaContent(QUrl.fromLocalFile(file_path))
-        self.playlist.addMedia(media_content)
-        self.media_player.play()
-        self.label.setText(QFile(file_path).fileName())
+            self.playlist.clear()
+            media_content = QMediaContent(QUrl.fromLocalFile(file_path))
+            self.playlist.addMedia(media_content)
+            self.media_player.play()
+            self.label.setText(QFile(file_path).fileName())
 
 
 app = QApplication(sys.argv)
