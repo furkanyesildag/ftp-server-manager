@@ -1,9 +1,9 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileSystemModel, QTreeView, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QFileDialog
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileSystemModel, QTreeView, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QFileDialog, QLineEdit, QPushButton, QMessageBox
 from PyQt5.QtCore import Qt, QUrl, QFile, QIODevice
-from PyQt5.QtMultimediaWidgets import QVideoWidget  # QVideoWidget'ı PyQt5.QtMultimediaWidgets modülünden import ediyoruz
+from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaPlaylist
-from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
+from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -11,18 +11,24 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("FTP Client")
 
         # FTP adresi, kullanıcı adı ve şifresi
-        self.ftp_url = "ftp://example.com/"
-        self.ftp_username = "username"
-        self.ftp_password = "password"
+        self.ftp_url = ""
+        self.ftp_username = ""
+        self.ftp_password = ""
 
         # FTP dosya sistemi modeli ve ağ yöneticisi
         self.model = QFileSystemModel()
-        self.model.setRootPath(self.ftp_url)
-        self.tree = QTreeView()
-        self.tree.setModel(self.model)
-        self.tree.setRootIndex(self.model.index(self.model.rootPath()))
-
         self.net_manager = QNetworkAccessManager(self)
+
+        # FTP server adresi, kullanıcı adı ve şifresi için giriş kutuları ve bağlanma düğmesi
+        self.server_address_label = QLabel("Server Adresi:")
+        self.server_address_input = QLineEdit()
+        self.username_label = QLabel("Kullanıcı Adı:")
+        self.username_input = QLineEdit()
+        self.password_label = QLabel("Şifre:")
+        self.password_input = QLineEdit()
+        self.password_input.setEchoMode(QLineEdit.Password)
+        self.connect_button = QPushButton("Bağlan")
+        self.connect_button.clicked.connect(self.on_connect_button_clicked)
 
         # Medya oynatıcı, oynatma listesi, video widget'i ve etiket
         self.media_player = QMediaPlayer()
@@ -37,7 +43,13 @@ class MainWindow(QMainWindow):
         # Arayüz düzeni
         main_layout = QHBoxLayout()
         left_layout = QVBoxLayout()
-        left_layout.addWidget(self.tree)
+        left_layout.addWidget(self.server_address_label)
+        left_layout.addWidget(self.server_address_input)
+        left_layout.addWidget(self.username_label)
+        left_layout.addWidget(self.username_input)
+        left_layout.addWidget(self.password_label)
+        left_layout.addWidget(self.password_input)
+        left_layout.addWidget(self.connect_button)
         left_layout.addStretch()
         right_layout = QVBoxLayout()
         right_layout.addWidget(self.label)
@@ -49,47 +61,23 @@ class MainWindow(QMainWindow):
         widget.setLayout(main_layout)
         self.setCentralWidget(widget)
 
-        self.tree.selectionModel().selectionChanged.connect(self.on_selection_changed)
+    def on_connect_button_clicked(self):
+        self.ftp_url = self.server_address_input.text()
+        self.ftp_username = self.username_input.text()
+        self.ftp_password = self.password_input.text()
 
-    def on_selection_changed(self):
-        index = self.tree.currentIndex()
-        file_path = self.model.filePath(index)
+        # FTP bağlantısı kontrolü
+        request = QNetworkRequest(QUrl(self.ftp_url))
+        request.setRawHeader(b"Authorization", f"Basic {self.ftp_username}:{self.ftp_password}".encode())
+        reply = self.net_manager.get(request)
 
-        # Seçilen dosya bir klasör ise
-        if QFile(file_path).isDir():
-            return
+        def handle_reply():
+            if reply.error() == QNetworkReply.NoError:
+                QMessageBox.information(self, "Bağlantı Başarılı", "FTP sunucusuna başarıyla bağlandınız.")
+            else:
+                QMessageBox.warning(self, "Bağlantı Hatası", "FTP sunucusuna bağlantı başarısız oldu.")
 
-        # Seçilen dosya bir medya dosyası ise
-        mime_type = QFile(file_path).mimeType()
-        if mime_type.startswith("audio") or mime_type.startswith("video"):
-            self.playlist.clear()
-            media_content = QMediaContent(QUrl.fromUserInput(file_path))
-            self.playlist.addMedia(media_content)
-            self.media_player.play()
-            self.label.setText(QFile(file_path).fileName())
-
-            # Seçilen dosyanın boyutunu al
-            url = QUrl.fromUserInput(file_path)
-            request = QNetworkRequest(url)
-            request.setAttribute(QNetworkRequest.AuthenticationRequiredAttribute, True)
-            request.setRawHeader(b"Authorization", "Basic " + f"{self.ftp_username}:{self.ftp_password}".encode())
-            reply = self.net_manager.head(request)
-            reply.finished.connect(lambda: self.label.setText(f"{QFile(file_path).fileName()} ({int(reply.header(QNetworkRequest.ContentLengthHeader))//(1024*1024)} MB)"))
-
-        # Seçilen dosya bir yerel dosya ise
-        if mime_type.startswith("application/octet-stream"):
-            self.open_file_dialog()
-
-    def open_file_dialog(self):
-        file_dialog = QFileDialog()
-        file_path, _ = file_dialog.getOpenFileName(self, "Open File")
-        if file_path:
-            self.playlist.clear()
-            media_content = QMediaContent(QUrl.fromLocalFile(file_path))
-            self.playlist.addMedia(media_content)
-            self.media_player.play()
-            self.label.setText(QFile(file_path).fileName())
-
+        reply.finished.connect(handle_reply)
 
 app = QApplication(sys.argv)
 window = MainWindow()
